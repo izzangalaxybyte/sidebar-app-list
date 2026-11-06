@@ -1,4 +1,4 @@
-.PHONY: build app run clean
+.PHONY: build app run pkg release clean
 
 build:
 	swift build
@@ -8,6 +8,12 @@ app:
 
 run: app
 	open build/SidebarAppList.app
+
+pkg: app
+	Scripts/package.sh
+
+release:
+	Scripts/release.sh
 
 clean:
 	rm -rf .build build

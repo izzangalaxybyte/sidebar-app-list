@@ -10,6 +10,15 @@ the window you were on comes back. Hover a row and click × to close it.
 Requires macOS 14 or later. Swift, SwiftUI + AppKit, no third-party
 dependencies, no private APIs.
 
+## Install a release
+
+Download `SidebarAppList-<version>.pkg` from the [releases page](https://github.com/izzangalaxybyte/sidebar-app-list/releases)
+and open it; it installs `SidebarAppList.app` into Applications. The package
+is not notarized with Apple, so if a plain double-click is refused,
+right-click the .pkg and choose Open; on macOS 15 or later, open it once and
+then click Open Anyway under System Settings → Privacy & Security. Launch the
+app from Applications and grant Accessibility as described below.
+
 ## Build and run
 
 ```bash
@@ -32,6 +41,20 @@ binary's path rather than to an app bundle. Use the `.app` for day-to-day use.
 
 To open the package in Xcode: `open Package.swift`. Run the `SidebarAppList`
 scheme; the same caveats as `swift run` apply.
+
+## Cutting a release
+
+```bash
+make release
+```
+
+`Scripts/release.sh` builds the signed app, wraps it in an Installer package
+with `productbuild` (`make pkg` does just that step), tags the current commit
+as `v<version>` and publishes a GitHub release with the .pkg attached. The
+package itself is unsigned: signing it needs a Developer ID Installer
+certificate from Apple. The version comes from
+`CFBundleShortVersionString` in `Resources/Info.plist`; bump it there before
+releasing. Requires a clean working tree and an authenticated `gh`.
 
 ## Accessibility permission
 
