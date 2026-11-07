@@ -42,8 +42,10 @@ enum WindowEnumerator {
                 // keep only those the window server reports as on screen.
                 // Minimized windows and hidden apps are never on screen but
                 // can be brought back here, so they pass through.
+                var windowID: CGWindowID?
                 if !isMinimized && !app.isHidden {
-                    guard let frame = window.frame, matches(frame, onScreen[app.pid] ?? []) else { continue }
+                    guard let frame = window.frame, let match = match(frame, onScreen[app.pid] ?? []) else { continue }
+                    windowID = match
                 }
 
                 let isFrontmost = focused.map { CFEqual($0, window) } ?? false
@@ -53,7 +55,8 @@ enum WindowEnumerator {
                     title: title,
                     element: window,
                     isMinimized: isMinimized,
-                    isFrontmost: isFrontmost
+                    isFrontmost: isFrontmost,
+                    windowID: windowID
                 ))
             }
             result[app.pid] = items
@@ -61,31 +64,38 @@ enum WindowEnumerator {
         return result
     }
 
-    /// Frames of normal-layer windows on the current Space, keyed by owner pid.
-    /// `kCGWindowBounds` does not need Screen Recording permission (window
-    /// titles would, which is why we never read `kCGWindowName`).
-    private static func onScreenFrames() -> [pid_t: [CGRect]] {
+    private struct OnScreenWindow {
+        let frame: CGRect
+        let id: CGWindowID
+    }
+
+    /// Frames and IDs of normal-layer windows on the current Space, keyed by
+    /// owner pid. `kCGWindowBounds` does not need Screen Recording permission
+    /// (window titles would, which is why we never read `kCGWindowName`).
+    private static func onScreenFrames() -> [pid_t: [OnScreenWindow]] {
         let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
         guard let list = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else { return [:] }
 
-        var frames: [pid_t: [CGRect]] = [:]
+        var frames: [pid_t: [OnScreenWindow]] = [:]
         for info in list {
             guard let layer = info[kCGWindowLayer as String] as? Int, layer == 0,
                   let owner = info[kCGWindowOwnerPID as String] as? Int,
+                  let number = info[kCGWindowNumber as String] as? Int,
                   let boundsDict = info[kCGWindowBounds as String] as? NSDictionary,
                   let bounds = CGRect(dictionaryRepresentation: boundsDict)
             else { continue }
-            frames[pid_t(owner), default: []].append(bounds)
+            frames[pid_t(owner), default: []].append(OnScreenWindow(frame: bounds, id: CGWindowID(number)))
         }
         return frames
     }
 
-    private static func matches(_ frame: CGRect, _ candidates: [CGRect]) -> Bool {
-        candidates.contains { candidate in
-            abs(candidate.minX - frame.minX) <= frameTolerance
-                && abs(candidate.minY - frame.minY) <= frameTolerance
-                && abs(candidate.width - frame.width) <= frameTolerance
-                && abs(candidate.height - frame.height) <= frameTolerance
-        }
+    /// The window-server ID of the on-screen window whose frame matches.
+    private static func match(_ frame: CGRect, _ candidates: [OnScreenWindow]) -> CGWindowID? {
+        candidates.first { candidate in
+            abs(candidate.frame.minX - frame.minX) <= frameTolerance
+                && abs(candidate.frame.minY - frame.minY) <= frameTolerance
+                && abs(candidate.frame.width - frame.width) <= frameTolerance
+                && abs(candidate.frame.height - frame.height) <= frameTolerance
+        }?.id
     }
 }

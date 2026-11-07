@@ -8,12 +8,16 @@ struct WindowItem: Identifiable, Equatable {
     let element: AXUIElement
     let isMinimized: Bool
     var isFrontmost: Bool
+    /// Window-server ID, matched by frame. Nil for minimized windows and
+    /// windows of hidden apps, which are not on screen. Used for thumbnails.
+    var windowID: CGWindowID?
 
     static func == (lhs: WindowItem, rhs: WindowItem) -> Bool {
         lhs.id == rhs.id
             && lhs.title == rhs.title
             && lhs.isMinimized == rhs.isMinimized
             && lhs.isFrontmost == rhs.isFrontmost
+            && lhs.windowID == rhs.windowID
     }
 }
 

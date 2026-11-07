@@ -6,8 +6,9 @@ struct SidebarView: View {
     let onSelectWindow: (WindowItem) -> Void
     let onSelectApp: (pid_t) -> Void
     let onCloseWindow: (WindowItem) -> Void
-    /// Called with the hovered window, or nil when the cursor leaves a row.
-    let onHoverWindow: (WindowItem?) -> Void
+    /// Called with the hovered row and its screen frame, or nils when the
+    /// cursor leaves a row.
+    let onHoverRow: (SidebarRow?, NSRect?) -> Void
 
     private static let listSpace = "sidebarList"
 
@@ -71,10 +72,10 @@ struct SidebarView: View {
                 if let window = row.window { onSelectWindow(window) } else { onSelectApp(row.pid) }
             },
             onClose: { if let window = row.window { onCloseWindow(window) } },
-            onHover: { hovering in
+            onHover: { frame in
                 // Rows passing under a drag are not previews.
                 guard draggingID == nil else { return }
-                onHoverWindow(hovering ? row.window : nil)
+                onHoverRow(frame == nil ? nil : row, frame)
             }
         )
         .offset(y: isDragging ? dragY - (rowFrames[row.id]?.midY ?? dragY) : 0)
@@ -99,7 +100,7 @@ struct SidebarView: View {
                 // gets onEnded, and the next drag must take over cleanly.
                 if draggingID != row.id {
                     draggingID = row.id
-                    onHoverWindow(nil)
+                    onHoverRow(nil, nil)
                 }
                 dragY = value.location.y
                 // Midpoint rule: the slot is the count of other rows whose centre
@@ -158,7 +159,8 @@ struct WindowRow: View {
     let canClose: Bool
     let onSelect: () -> Void
     let onClose: () -> Void
-    let onHover: (Bool) -> Void
+    /// The row's screen frame on enter, nil on exit.
+    let onHover: (NSRect?) -> Void
 
     @State private var hovering = false
     @State private var closeHovering = false
@@ -206,10 +208,9 @@ struct WindowRow: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.white.opacity(backgroundOpacity))
         )
-        .background(HoverTracker(isHovering: $hovering))
+        .background(HoverTracker(isHovering: $hovering, onHoverFrame: onHover))
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
-        .onChange(of: hovering) { _, isHovering in onHover(isHovering) }
         .animation(.easeOut(duration: 0.12), value: hovering)
     }
 

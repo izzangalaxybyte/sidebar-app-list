@@ -6,6 +6,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let item: NSStatusItem
     private let menu = NSMenu()
     private let permissionItem = NSMenuItem()
+    private let thumbnailItem = NSMenuItem()
     private let showSidebar: () -> Void
 
     init(showSidebar: @escaping () -> Void) {
@@ -24,6 +25,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         permissionItem.action = #selector(openAccessibilitySettings)
         permissionItem.target = self
         menu.addItem(permissionItem)
+        thumbnailItem.action = #selector(enableThumbnails)
+        thumbnailItem.target = self
+        menu.addItem(thumbnailItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit Sidebar App List", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 
@@ -42,8 +46,16 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             permissionItem.title = "Grant Accessibility Access…"
             permissionItem.image = NSImage(systemSymbolName: "exclamationmark.triangle.fill", accessibilityDescription: nil)
         }
+        if WindowThumbnailer.hasPermission {
+            thumbnailItem.title = "Window thumbnails on"
+            thumbnailItem.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: nil)
+        } else {
+            thumbnailItem.title = "Enable Window Thumbnails…"
+            thumbnailItem.image = NSImage(systemSymbolName: "photo", accessibilityDescription: nil)
+        }
     }
 
     @objc private func showSidebarAction() { showSidebar() }
     @objc private func openAccessibilitySettings() { AccessibilityPermission.openSystemSettings() }
+    @objc private func enableThumbnails() { WindowThumbnailer.requestPermission() }
 }

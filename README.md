@@ -4,8 +4,10 @@ A menu-bar-only macOS app that shows your open windows as a vertical tab
 list, in the style of the Arc / Zen browser sidebar. Move the cursor to the
 right edge of the screen and a dark, blurred panel slides out with one row
 per window, grouped by app, in an order you control. Resting on a row
-previews that window; click to keep it, or move away from the sidebar and
-the window you were on comes back. Hover a row and click × to close it.
+pops up a small thumbnail of that window beside the sidebar, like the
+Windows taskbar; resting on the thumbnail previews the full window. Click
+the row or the thumbnail to switch to it, or move away and the window you
+were on comes back. Hover a row and click × to close it.
 
 Requires macOS 14 or later. Swift, SwiftUI + AppKit, no third-party
 dependencies, no private APIs.
@@ -133,12 +135,22 @@ need to clear the stale ad-hoc entry one last time after switching.
 - **Raise.** `kAXRaiseAction` on the window, then `kAXFrontmost` on the app
   and `NSRunningApplication.activate()`. Minimized windows are un-minimized
   first. **Close** presses the window's `kAXCloseButton`.
-- **Hover preview.** Resting on a row for 120ms raises that window the same
-  way. The first preview records which app and window were in front; hiding
-  the sidebar without a click raises them again, while a click keeps the
-  preview. Minimized windows are not previewed, since that would
-  un-minimize them. The most-recently-used order is frozen while the sidebar
-  is open so previews don't reorder rows under the cursor.
+- **Hover thumbnail and preview.** Resting on a row for 120ms shows a
+  small card to the left of the sidebar, centred on the row, with a live
+  still of the window (ScreenCaptureKit, `SCScreenshotManager`). The window
+  is matched to its window-server ID by the same frame matching used for
+  the Space filter. Moving between rows switches the card at once. Resting
+  on the card raises the full window the same way a click does; the first
+  such preview records which app and window were in front, and leaving the
+  card or closing the sidebar raises them again, while clicking the row or
+  the card keeps it. The card and the gap beside it count as part of the
+  sidebar for auto-hide. Minimized windows get a card but are not
+  previewed, since that would un-minimize them. Window images need Screen
+  Recording permission, which the app never asks for on its own: use
+  **Enable Window Thumbnails…** in the menu-bar item (macOS applies it after
+  a relaunch). Without it the card shows the app icon. The
+  most-recently-used order is frozen while the sidebar is open so previews
+  don't reorder rows under the cursor.
 - **Ordering.** Rows are one flat list. The order is seeded once at start
   (frontmost app first, then launch order, then stable-sorted by the app
   order saved from the previous run) and after that only you change it.
@@ -170,9 +182,12 @@ Sources/SidebarAppList/
   Model/WindowModel.swift          WindowItem / AppGroup
   Model/WindowEnumerator.swift     AX + CGWindowList enumeration (background-safe)
   Model/WindowStore.swift          MRU order, AXObservers, refresh coalescing, actions
+  Model/HoverPreview.swift         Row → thumbnail → full-window preview state machine
+  Model/WindowThumbnailer.swift    ScreenCaptureKit window stills
   UI/EdgeTriggerWindow.swift       1pt edge strip with tracking area
   UI/SidebarPanel.swift            Floating panel, slide animation, hide logic
   UI/SidebarView.swift             SwiftUI list and rows
+  UI/ThumbnailPanel.swift          Hover thumbnail card beside the sidebar
   UI/HoverTracker.swift            Hover detection that works in inactive windows
 ```
 

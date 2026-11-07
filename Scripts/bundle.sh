@@ -23,7 +23,7 @@ printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 if [ -z "${CODESIGN_IDENTITY:-}" ]; then
     CODESIGN_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
-        | sed -n 's/^ *1) [0-9A-F]* "\(.*\)"$/\1/p' || true)"
+        | sed -n 's/^ *1) \([0-9A-F]*\) ".*"$/\1/p' || true)"
 fi
 if [ -z "$CODESIGN_IDENTITY" ]; then
     CODESIGN_IDENTITY="-"

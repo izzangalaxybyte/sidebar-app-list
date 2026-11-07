@@ -6,18 +6,24 @@ import SwiftUI
 /// area is not. `hitTest` returns nil so clicks fall through to SwiftUI.
 struct HoverTracker: NSViewRepresentable {
     @Binding var isHovering: Bool
+    /// Called on enter with the view's frame in screen coordinates, and with
+    /// nil on exit.
+    var onHoverFrame: ((NSRect?) -> Void)? = nil
 
     func makeNSView(context: Context) -> HoverTrackingView { HoverTrackingView() }
 
     func updateNSView(_ view: HoverTrackingView, context: Context) {
+        let onHoverFrame = onHoverFrame
         view.onChange = { hovering in
             if isHovering != hovering { isHovering = hovering }
         }
+        view.onFrame = onHoverFrame
     }
 }
 
 final class HoverTrackingView: NSView {
     var onChange: ((Bool) -> Void)?
+    var onFrame: ((NSRect?) -> Void)?
     private var trackingArea: NSTrackingArea?
 
     override func updateTrackingAreas() {
@@ -33,7 +39,14 @@ final class HoverTrackingView: NSView {
         trackingArea = area
     }
 
-    override func mouseEntered(with event: NSEvent) { onChange?(true) }
-    override func mouseExited(with event: NSEvent) { onChange?(false) }
+    override func mouseEntered(with event: NSEvent) {
+        onChange?(true)
+        if let window { onFrame?(window.convertToScreen(convert(bounds, to: nil))) }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        onChange?(false)
+        onFrame?(nil)
+    }
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
